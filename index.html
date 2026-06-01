@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Adjuster</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            border: 1px solid #333;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h2 { margin-top: 0; color: #4CAF50; margin-bottom: 20px; letter-spacing: 1px; }
+
+        .control-group {
+            margin-bottom: 20px;
+            text-align: left;
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #bbb;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #4CAF50;
+        }
+
+        input[type="file"] { display: none; }
+        
+        .file-upload-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #2c2c2c;
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .file-upload-label:hover { background: #4CAF50; color: #121212; }
+
+        #fileName {
+            display: block;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            word-break: break-all;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            min-width: 45%;
+        }
+
+        #playBtn { background: #4CAF50; color: #111; }
+        #playBtn:hover:not(:disabled) { background: #45a049; }
+        
+        #stopBtn { background: #d32f2f; color: white; }
+        #stopBtn:hover:not(:disabled) { background: #b71c1c; }
+
+        #exportBtn {
+            flex-basis: 100%;
+            background: #2196F3;
+            color: white;
+            margin-top: 5px;
+        }
+        #exportBtn:hover:not(:disabled) { background: #1e88e5; }
+
+        button:disabled { background: #444 !important; color: #777 !important; cursor: not-allowed; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Audio Adjuster</h2>
+
+        <label class="file-upload-label" for="audioUpload">📁 Select Audio File</label>
+        <input type="file" id="audioUpload" accept="audio/*">
+        <span id="fileName">No file selected</span>
+
+        <div class="btn-group">
+            <button id="playBtn" disabled>▶ Play</button>
+            <button id="stopBtn" disabled>⏹ Stop</button>
+            <button id="exportBtn" disabled>💾 Export to WAV</button>
+        </div>
+
+        <div class="control-group">
+            <label><span>Tempo (Speed)</span><span id="tempoDisplay">1.0x</span></label>
+            <input type="range" id="tempoSlider" min="0.5" max="2.0" step="0.05" value="1" disabled>
+            
+            <label style="margin-top:15px;"><span>Key (Pitch)</span><span id="pitchDisplay">0 Semitones</span></label>
+            <input type="range" id="pitchSlider" min="-12" max="12" step="1" value="0" disabled>
+            
+            <label style="margin-top:15px; color:#4CAF50;"><span>Smoothness (Window Size)</span><span id="windowDisplay">0.10s</span></label>
+            <input type="range" id="windowSlider" min="0.03" max="0.5" step="0.01" value="0.1" disabled>
+        </div>
+
+        <div class="control-group">
+            <label><span>Reverb Space</span><span id="reverbDisplay">0%</span></label>
+            <input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0" disabled>
+
+            <label style="margin-top:15px;"><span>Lowpass Filter (Muffle)</span><span id="filterDisplay">Off</span></label>
+            <input type="range" id="filterSlider" min="200" max="20000" step="100" value="20000" disabled>
+        </div>
+    </div>
+
+    <script>
+        let player = null;
+        let pitchShift = null;
+        let reverb = null;
+        let filter = null;
+        let isPlaying = false;
+        let originalAudioBuffer = null;
+
+        // UI Elements
+        const audioUpload = document.getElementById('audioUpload');
+        const fileNameDisplay = document.getElementById('fileName');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        
+        const tempoSlider = document.getElementById('tempoSlider');
+        const pitchSlider = document.getElementById('pitchSlider');
+        const windowSlider = document.getElementById('windowSlider');
+        const reverbSlider = document.getElementById('reverbSlider');
+        const filterSlider = document.getElementById('filterSlider');
+        
+        const tempoDisplay = document.getElementById('tempoDisplay');
+        const pitchDisplay = document.getElementById('pitchDisplay');
+        const windowDisplay = document.getElementById('windowDisplay');
+        const reverbDisplay = document.getElementById('reverbDisplay');
+        const filterDisplay = document.getElementById('filterDisplay');
+
+        // 1. File Upload & Audio Graph Setup
+        audioUpload.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            fileNameDisplay.textContent = "Loading audio engine... Please wait.";
+            toggleControls(false);
+            await Tone.start();
+
+            // Clean up old instances
+            if (player) player.dispose();
+            if (pitchShift) pitchShift.dispose();
+            if (reverb) reverb.dispose();
+            if (filter) filter.dispose();
+
+            const url = URL.createObjectURL(file);
+
+            // Initialize Effects Chain
+            pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.1 });
+            filter = new Tone.Filter({ frequency: 20000, type: "lowpass" });
+            reverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: 0 }).toDestination();
+
+            // Connect nodes: Player -> PitchShift -> Filter -> Reverb -> Speakers
+            pitchShift.connect(filter);
+            filter.connect(reverb);
+
+            player = new Tone.Player({
+                url: url,
+                loop: true,
+                onload: () => {
+                    fileNameDisplay.textContent = `Loaded: ${file.name}`;
+                    originalAudioBuffer = player.buffer; 
+                    player.connect(pitchShift); // Connect player to start of chain
+                    toggleControls(true);
+                    resetSliders();
+                }
+            });
+        });
+
+        // 2. Play / Stop
+        playBtn.addEventListener('click', async () => {
+            await Tone.start();
+            if (player && player.loaded) {
+                if (!isPlaying) {
+                    player.start();
+                    isPlaying = true;
+                    playBtn.textContent = "⏸ Pause";
+                } else {
+                    player.stop();
+                    isPlaying = false;
+                    playBtn.textContent = "▶ Play";
+                }
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (player) {
+                player.stop();
+                isPlaying = false;
+                playBtn.textContent = "▶ Play";
+            }
+        });
+
+        // 3. Parameter Controls
+        tempoSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (player) player.playbackRate = val;
+            tempoDisplay.textContent = `${val.toFixed(2)}x`;
+        });
+
+        pitchSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            if (pitchShift) pitchShift.pitch = val;
+            const sign = val > 0 ? "+" : "";
+            pitchDisplay.textContent = `${sign}${val} Semitones`;
+        });
+
+        windowSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (pitchShift) pitchShift.windowSize = val;
+            windowDisplay.textContent = `${val.toFixed(2)}s`;
+        });
+
+        reverbSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (reverb) reverb.wet.value = val;
+            reverbDisplay.textContent = `${Math.round(val * 100)}%`;
+        });
+
+        filterSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (filter) filter.frequency.value = val;
+            filterDisplay.textContent = val >= 20000 ? "Off" : `${val} Hz`;
+        });
+
+        // 4. Offline Export Logic
+        exportBtn.addEventListener('click', async () => {
+            if (!originalAudioBuffer) return;
+            if (isPlaying) stopBtn.click();
+
+            exportBtn.textContent = "⏳ Rendering... Please wait";
+            toggleControls(false);
+
+            try {
+                const currentPitch = parseInt(pitchSlider.value);
+                const currentWindowSize = parseFloat(windowSlider.value);
+                const currentTempo = parseFloat(tempoSlider.value);
+                const currentReverb = parseFloat(reverbSlider.value);
+                const currentFilter = parseFloat(filterSlider.value);
+                
+                const duration = originalAudioBuffer.duration / currentTempo;
+
+                // Render in a silent background thread
+                const renderedBuffer = await Tone.Offline(({ context }) => {
+                    const offPitch = new Tone.PitchShift({
+                        pitch: currentPitch, windowSize: currentWindowSize, context: context
+                    });
+                    const offFilter = new Tone.Filter({
+                        frequency: currentFilter, type: "lowpass", context: context
+                    });
+                    const offReverb = new Tone.Freeverb({
+                        roomSize: 0.8, dampening: 3000, wet: currentReverb, context: context
+                    }).toDestination();
+
+                    offPitch.connect(offFilter);
+                    offFilter.connect(offReverb);
+
+                    const offlinePlayer = new Tone.Player({
+                        url: originalAudioBuffer, playbackRate: currentTempo, context: context
+                    }).connect(offPitch);
+
+                    offlinePlayer.start(0);
+                }, duration);
+
+                // Convert and download
+                const wavData = audioBufferToWav(renderedBuffer.get());
+                const blob = new Blob([wavData], { type: 'audio/wav' });
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = 'advanced_adjusted_track.wav';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+
+            } catch (error) {
+                console.error("Export error:", error);
+                alert("Failed to export the audio file.");
+            } finally {
+                exportBtn.textContent = "💾 Export to WAV";
+                toggleControls(true);
+            }
+        });
+
+        // Helper Functions
+        function toggleControls(enable) {
+            playBtn.disabled = !enable;
+            stopBtn.disabled = !enable;
+            exportBtn.disabled = !enable;
+            tempoSlider.disabled = !enable;
+            pitchSlider.disabled = !enable;
+            windowSlider.disabled = !enable;
+            reverbSlider.disabled = !enable;
+            filterSlider.disabled = !enable;
+            if (!enable) isPlaying = false;
+            playBtn.textContent = "▶ Play";
+        }
+
+        function resetSliders() {
+            tempoSlider.value = 1; tempoDisplay.textContent = "1.0x";
+            pitchSlider.value = 0; pitchDisplay.textContent = "0 Semitones";
+            windowSlider.value = 0.1; windowDisplay.textContent = "0.10s";
+            reverbSlider.value = 0; reverbDisplay.textContent = "0%";
+            filterSlider.value = 20000; filterDisplay.textContent = "Off";
+            
+            if (player) player.playbackRate = 1;
+            if (pitchShift) { pitchShift.pitch = 0; pitchShift.windowSize = 0.1; }
+            if (reverb) reverb.wet.value = 0;
+            if (filter) filter.frequency.value = 20000;
+        }
+
+        // WAV Encoding Algorithm
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1;
+            const bitDepth = 16;
+            let result;
+            if (numChannels === 2) result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+            else result = buffer.getChannelData(0);
+            return encodeWAV(result, format, sampleRate, numChannels, bitDepth);
+        }
+
+        function interleave(inputL, inputR) {
+            const length = inputL.length + inputR.length;
+            const result = new Float32Array(length);
+            let index = 0, inputIndex = 0;
+            while (index < length) {
+                result[index++] = inputL[inputIndex];
+                result[index++] = inputR[inputIndex];
+                inputIndex++;
+            }
+            return result;
+        }
+
+        function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * bytesPerSample, true);
+            floatTo16BitPCM(view, 44, samples);
+            return view;
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+        }
+
+        function floatTo16BitPCM(output, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                let s = Math.max(-1, Math.min(1, input[i]));
+                output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+    </script>
+</body>
+</html>
