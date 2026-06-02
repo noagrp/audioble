@@ -125,7 +125,7 @@
         <h2>Audio Adjuster</h2>
 
         <label class="file-upload-label" for="audioUpload">📁 Select Audio File</label>
-        <input type="file" id="audioUpload" accept="audio/*">
+        <input type="file" id="audioUpload" accept="audio/*, video/mp4, video/webm, .mp4, .m4a, .mkv">
         <span id="fileName">No file selected</span>
 
         <div class="btn-group">
@@ -283,6 +283,9 @@
 
             exportBtn.textContent = "⏳ Rendering... Please wait";
             toggleControls(false);
+            
+            // Allow the UI to update the button text before blocking the thread with heavy rendering
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             try {
                 const currentPitch = parseInt(pitchSlider.value);
@@ -330,7 +333,7 @@
 
             } catch (error) {
                 console.error("Export error:", error);
-                alert("Failed to export the audio file.");
+                alert("Failed to export the audio file. The file might be too large for browser memory, or the browser blocked the download.");
             } finally {
                 exportBtn.textContent = "💾 Export to WAV";
                 toggleControls(true);
