@@ -34,7 +34,7 @@
             max-width: 520px;
             text-align: center;
             border: 1px solid #333;
-            max-height: 100vh;
+            max-height: 100%;
             overflow-y: auto;
         }
 
@@ -235,7 +235,6 @@
             toggleControls(false);
             await Tone.start();
 
-            // Clean up old instances
             if (player) player.dispose();
             if (pitchShift) pitchShift.dispose();
             if (reverb) reverb.dispose();
@@ -243,17 +242,14 @@
 
             const url = URL.createObjectURL(file);
 
-            // Initialize Effects Chain
             pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.1 });
             filter = new Tone.Filter({ frequency: 20000, type: "lowpass" });
             reverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: 0 });
 
-            // Connect FX chain to destination
             pitchShift.connect(filter);
             filter.connect(reverb);
             reverb.toDestination();
 
-            // Load audio buffer first to get duration
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
             audioBuffer = await Tone.context.decodeAudioData(arrayBuffer);
@@ -261,7 +257,6 @@
 
             fileNameDisplay.textContent = `Loaded: ${file.name}`;
             
-            // Setup A-B Loop Sliders
             startSlider.max = trackDuration;
             endSlider.max = trackDuration;
             startSlider.value = 0;
@@ -312,7 +307,7 @@
             }
         });
 
-        // 3. Direct Audio Export (Synchronized Tone.Offline Grain Rendering)
+        // 3. Standardized Direct Audio Export (Using Tone.Offline GrainPipeline)
         exportBtn.addEventListener('click', async () => {
             if (!audioBuffer) return;
             exportBtn.disabled = true;
@@ -326,7 +321,7 @@
 
                 const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
                 const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
-                const renderDuration = (duration / currentTempo) + 1; // buffer for tail effects like reverb
+                const renderDuration = (duration / currentTempo) + 1;
 
                 const renderedBuffer = await Tone.Offline(async () => {
                     const offlinePlayer = new Tone.GrainPlayer({
@@ -348,7 +343,6 @@
                     offlinePlayer.start(0, startTime);
                 }, renderDuration);
 
-                // Convert AudioBuffer to WAV Blob
                 const wavBlob = bufferToWave(renderedBuffer.get(), Math.floor((duration / currentTempo) * audioBuffer.sampleRate));
                 const downloadUrl = URL.createObjectURL(wavBlob);
                 
@@ -422,7 +416,6 @@
             filterDisplay.textContent = val >= 20000 ? "Off" : `${val} Hz`;
         });
 
-        // Helper Functions
         function toggleControls(enable) {
             playBtn.disabled = !enable;
             stopBtn.disabled = !enable;
@@ -469,7 +462,6 @@
             endDisplay.textContent = formatTime(parseFloat(endSlider.value));
         }
 
-        // WAV Encoder Helper for Offline Export
         function bufferToWave(abuffer, len) {
             let numOfChan = abuffer.numberOfChannels,
                 sampleRate = abuffer.sampleRate,
@@ -481,21 +473,21 @@
                 offset = 0,
                 pos = 0;
 
-            setUint32(0x46464952);                         // "RIFF"
-            setUint32(length - 8);                         // file length - 8
-            setUint32(0x45564157);                         // "WAVE"
+            setUint32(0x46464952);
+            setUint32(length - 8);
+            setUint32(0x45564157);
 
-            setUint32(0x20746d66);                         // "fmt " chunk
-            setUint32(16);                                 // length = 16
-            setUint16(1);                                  // PCM (uncompressed)
+            setUint32(0x20746d66);
+            setUint32(16);
+            setUint16(1);
             setUint16(numOfChan);
             setUint32(sampleRate);
-            setUint32(sampleRate * 2 * numOfChan);         // avg. bytes/sec
-            setUint16(numOfChan * 2);                      // block-align
-            setUint16(16);                                 // 16-bit
+            setUint32(sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2);
+            setUint16(16);
 
-            setUint32(0x61746164);                         // "data" - chunk
-            setUint32(length - pos - 4);                   // chunk length
+            setUint32(0x61746164);
+            setUint32(length - pos - 4);
 
             for (let i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
 
