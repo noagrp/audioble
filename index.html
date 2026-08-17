@@ -3,509 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audioble</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    
-    <script>
-        if (typeof Tone === 'undefined') {
-            document.write('<script src="Tone.js"><\/script>');
-        }
-    </script>
-
-    <style>
-        body, html {
-            margin: 0; padding: 0;
-            width: 100%;
-            min-height: 100%;
-            background-color: #121212;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-        }
-
-        .container {
-            background: #1e1e1e;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            width: 90%;
-            max-width: 520px;
-            text-align: center;
-            border: 1px solid #333;
-            margin: 20px 0;
-            box-sizing: border-box;
-        }
-
-        h2 { 
-            margin: 0 0 5px 0; 
-            color: #4CAF50; 
-            font-size: 2rem; 
-            letter-spacing: 1.5px; 
-        }
-
-        .subtitle {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: 25px;
-            letter-spacing: 0.5px;
-        }
-
-        .control-group {
-            margin-bottom: 20px;
-            text-align: left;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #2a2a2a;
-        }
-
-        .control-group:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            color: #bbb;
-            margin-bottom: 8px;
-            align-items: center;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            cursor: pointer;
-            accent-color: #4CAF50;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #4CAF50;
-        }
-
-        input[type="file"] { display: none; }
-        
-        .file-upload-label {
-            display: inline-block;
-            padding: 12px 20px;
-            background: #2c2c2c;
-            border: 1px solid #4CAF50;
-            color: #4CAF50;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        .file-upload-label:hover { background: #4CAF50; color: #121212; }
-
-        #fileName {
-            display: block;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            color: #888;
-            word-break: break-all;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        #playBtn { background: #4CAF50; color: #111; }
-        #playBtn:hover:not(:disabled) { background: #45a049; }
-        
-        #stopBtn { background: #d32f2f; color: white; }
-        #stopBtn:hover:not(:disabled) { background: #b71c1c; }
-
-        #exportBtn { background: #2196F3; color: white; margin-bottom: 20px; width: 100%; }
-        #exportBtn:hover:not(:disabled) { background: #1976D2; }
-
-        button:disabled { background: #444 !important; color: #777 !important; cursor: not-allowed; }
-
-        .time-display {
-            font-family: monospace;
-            color: #4CAF50;
-            font-size: 0.9rem;
-        }
-    </style>
+    <title>MP3Fac</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FFmpeg WASM for browser-based audio processing -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-p-0 min-h-screen flex flex-col">
 
-    <div class="container">
-        <h2>Audioble</h2>
-        <div class="subtitle"></div>
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 py-6 px-8 shadow-md">
+        <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">MP3Fac</h1>
+                <p class="text-sm text-slate-400 mt-1">All-in-one browser-based MP3 conversion and editing tool</p>
+            </div>
+            <div id="ffmpeg-status" class="text-xs bg-slate-700 px-3 py-1.5 rounded-full text-amber-300 font-medium">
+                Loading Audio Engine...
+            </div>
+        </div>
+    </header>
 
-        <label class="file-upload-label" for="audioUpload">📁 Select Audio / Video File</label>
-        <input type="file" id="audioUpload" accept="audio/*, video/mp4, video/webm, .mp4, .m4a, .mkv">
-        <span id="fileName">No file selected</span>
-
-        <div class="btn-group">
-            <button id="playBtn" disabled>▶ Play</button>
-            <button id="stopBtn" disabled>⏹ Stop</button>
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 md:p-8">
+        
+        <!-- Tabs Navigation -->
+        <div class="flex flex-wrap border-b border-slate-700 mb-6 gap-2">
+            <button onclick="switchTab(1)" id="tab-btn-1" class="tab-btn px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 transition-all">MP3 to Others</button>
+            <button onclick="switchTab(2)" id="tab-btn-2" class="tab-btn px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all">Others to MP3</button>
+            <button onclick="switchTab(3)" id="tab-btn-3" class="tab-btn px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all">MP3 Cutter</button>
+            <button onclick="switchTab(4)" id="tab-btn-4" class="tab-btn px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all">MP3 Joiner</button>
         </div>
 
-        <button id="exportBtn" disabled>💾 Export Modified Audio (.wav)</button>
-
-        <!-- Practice & Looping Group -->
-        <div class="control-group">
-            <label style="color: #4CAF50; font-weight: bold;">
-                <span>A-B Loop Practice</span>
-                <input type="checkbox" id="loopToggle" disabled>
-            </label>
-            <label style="margin-top: 10px;"><span>Loop Start (A)</span><span id="startDisplay" class="time-display">0:00</span></label>
-            <input type="range" id="startSlider" min="0" max="100" step="0.1" value="0" disabled>
-            
-            <label style="margin-top: 10px;"><span>Loop End (B)</span><span id="endDisplay" class="time-display">0:00</span></label>
-            <input type="range" id="endSlider" min="0" max="100" step="0.1" value="100" disabled>
+        <!-- TAB 1: MP3 to Other Formats -->
+        <div id="tab-content-1" class="tab-content bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-4">Convert MP3 to Other Formats</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select MP3 File</label>
+                    <input type="file" id="t1-file" accept=".mp3" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Target Format</label>
+                    <select id="t1-format" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="wav">WAV (Lossless)</option>
+                        <option value="aac">AAC</option>
+                        <option value="ogg">OGG</option>
+                        <option value="flac">FLAC (Lossless)</option>
+                        <option value="m4a">M4A</option>
+                    </select>
+                </div>
+                <button onclick="processTab1()" id="t1-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Convert & Download</button>
+            </div>
         </div>
 
-        <!-- Performance Controls -->
-        <div class="control-group">
-            <label><span>Tempo (Speed - No Pitch Shift)</span><span id="tempoDisplay">1.0x</span></label>
-            <input type="range" id="tempoSlider" min="0.5" max="2.0" step="0.05" value="1" disabled>
-            
-            <label style="margin-top:15px;"><span>Key (Pitch Shift)</span><span id="pitchDisplay">0 Semitones</span></label>
-            <input type="range" id="pitchSlider" min="-12" max="12" step="1" value="0" disabled>
+        <!-- TAB 2: Other Formats to MP3 -->
+        <div id="tab-content-2" class="tab-content hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-4">Convert Media to MP3</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select Audio/Video File (MP4, MPEG, WAV, AAC, etc.)</label>
+                    <input type="file" id="t2-file" accept="audio/*,video/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">MP3 Quality (Bitrate)</label>
+                    <select id="t2-bitrate" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="320k">320 kbps (High Quality)</option>
+                        <option value="192k" selected>192 kbps (Standard)</option>
+                        <option value="128k">128 kbps (Smaller File)</option>
+                    </select>
+                </div>
+                <button onclick="processTab2()" id="t2-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Convert to MP3</button>
+            </div>
         </div>
 
-        <!-- Effects Group -->
-        <div class="control-group">
-            <label><span>Reverb Space</span><span id="reverbDisplay">0%</span></label>
-            <input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0" disabled>
-
-            <label style="margin-top:15px;"><span>Lowpass Filter (Muffle)</span><span id="filterDisplay">Off</span></label>
-            <input type="range" id="filterSlider" min="200" max="20000" step="100" value="20000" disabled>
+        <!-- TAB 3: MP3 Cutter -->
+        <div id="tab-content-3" class="tab-content hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-4">MP3 Cutter (Set A-B Points)</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select MP3 File</label>
+                    <input type="file" id="t3-file" accept=".mp3,audio/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Start Time (Point A)</label>
+                        <input type="text" id="t3-start" placeholder="00:00:00 or seconds" value="00:00:00" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">End Time (Point B)</label>
+                        <input type="text" id="t3-end" placeholder="00:00:10 or seconds" value="00:00:10" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <button onclick="processTab3()" id="t3-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Cut & Download MP3</button>
+            </div>
         </div>
-    </div>
 
+        <!-- TAB 4: MP3 Joiner -->
+        <div id="tab-content-4" class="tab-content hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-4">MP3 Joiner (Merge Multiple MP3s)</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select 2 or More MP3 Files</label>
+                    <input type="file" id="t4-files" accept=".mp3" multiple class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                </div>
+                <p class="text-xs text-slate-400">Files will be merged in the order they are selected.</p>
+                <button onclick="processTab4()" id="t4-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Join & Download MP3</button>
+            </div>
+        </div>
+
+        <!-- Global Status / Output Section -->
+        <div id="output-box" class="mt-6 hidden bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <p id="output-text" class="text-sm text-slate-300 mb-3"></p>
+            <div id="download-container"></div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-xs text-slate-500 border-t border-slate-800">
+        MP3Fac &bull; Powered by WebAssembly & FFmpeg
+    </footer>
+
+    <!-- Logic Script -->
     <script>
-        let player = null;
-        let pitchShift = null;
-        let reverb = null;
-        let filter = null;
-        let audioBuffer = null;
-        let trackDuration = 0;
-        let isPlaying = false;
+        const { FFmpeg } = FFmpegWASM;
+        let ffmpeg = null;
 
-        const audioUpload = document.getElementById('audioUpload');
-        const fileNameDisplay = document.getElementById('fileName');
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        
-        const loopToggle = document.getElementById('loopToggle');
-        const startSlider = document.getElementById('startSlider');
-        const endSlider = document.getElementById('endSlider');
-        const startDisplay = document.getElementById('startDisplay');
-        const endDisplay = document.getElementById('endDisplay');
-        
-        const tempoSlider = document.getElementById('tempoSlider');
-        const pitchSlider = document.getElementById('pitchSlider');
-        const reverbSlider = document.getElementById('reverbSlider');
-        const filterSlider = document.getElementById('filterSlider');
-        
-        const tempoDisplay = document.getElementById('tempoDisplay');
-        const pitchDisplay = document.getElementById('pitchDisplay');
-        const reverbDisplay = document.getElementById('reverbDisplay');
-        const filterDisplay = document.getElementById('filterDisplay');
-
-        audioUpload.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            fileNameDisplay.textContent = "Loading audio engine... Please wait.";
-            toggleControls(false);
-            await Tone.start();
-
-            if (player) player.dispose();
-            if (pitchShift) pitchShift.dispose();
-            if (reverb) reverb.dispose();
-            if (filter) filter.dispose();
-
-            const url = URL.createObjectURL(file);
-
-            pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.1 });
-            filter = new Tone.Filter({ frequency: 20000, type: "lowpass" });
-            reverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: 0 });
-
-            pitchShift.connect(filter);
-            filter.connect(reverb);
-            reverb.toDestination();
-
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            audioBuffer = await Tone.context.decodeAudioData(arrayBuffer);
-            trackDuration = audioBuffer.duration;
-
-            fileNameDisplay.textContent = `Loaded: ${file.name}`;
-            
-            startSlider.max = trackDuration;
-            endSlider.max = trackDuration;
-            startSlider.value = 0;
-            endSlider.value = trackDuration;
-            updateTimeDisplays();
-
-            toggleControls(true);
-            resetSliders();
-        });
-
-        function createGrainPlayer() {
-            if (player) player.dispose();
-            player = new Tone.GrainPlayer({
-                url: audioBuffer,
-                loop: loopToggle.checked,
-                loopStart: parseFloat(startSlider.value),
-                loopEnd: parseFloat(endSlider.value),
-                playbackRate: parseFloat(tempoSlider.value),
-                grainSize: 0.1,
-                overlap: 0.05
-            });
-            player.connect(pitchShift);
-        }
-
-        playBtn.addEventListener('click', async () => {
-            await Tone.start();
-            if (audioBuffer) {
-                if (!isPlaying) {
-                    createGrainPlayer();
-                    const startTime = parseFloat(startSlider.value);
-                    player.start(0, startTime);
-                    isPlaying = true;
-                    playBtn.textContent = "⏸ Pause";
-                } else {
-                    if (player) player.stop();
-                    isPlaying = false;
-                    playBtn.textContent = "▶ Play";
-                }
-            }
-        });
-
-        stopBtn.addEventListener('click', () => {
-            if (player) {
-                player.stop();
-                isPlaying = false;
-                playBtn.textContent = "▶ Play";
-            }
-        });
-
-        exportBtn.addEventListener('click', async () => {
-            if (!audioBuffer) return;
-            exportBtn.disabled = true;
-            exportBtn.textContent = "Rendering audio file...";
-
+        async function loadFFmpeg() {
+            const statusEl = document.getElementById('ffmpeg-status');
             try {
-                const currentTempo = parseFloat(tempoSlider.value);
-                const currentPitch = parseInt(pitchSlider.value);
-                const currentReverbWet = parseFloat(reverbSlider.value);
-                const currentFilterFreq = parseFloat(filterSlider.value);
-
-                const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
-                const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
-                const renderDuration = (duration / currentTempo) + 1;
-
-                const renderedBuffer = await Tone.Offline(async () => {
-                    const offlinePlayer = new Tone.GrainPlayer({
-                        url: audioBuffer,
-                        playbackRate: currentTempo,
-                        grainSize: 0.1,
-                        overlap: 0.05
-                    });
-
-                    const offlinePitch = new Tone.PitchShift({ pitch: currentPitch, windowSize: 0.1 });
-                    const offlineFilter = new Tone.Filter({ frequency: currentFilterFreq, type: "lowpass" });
-                    const offlineReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: currentReverbWet });
-
-                    offlinePlayer.connect(offlinePitch);
-                    offlinePitch.connect(offlineFilter);
-                    offlineFilter.connect(offlineReverb);
-                    offlineReverb.toDestination();
-
-                    offlinePlayer.start(0, startTime);
-                }, renderDuration);
-
-                const wavBlob = bufferToWave(renderedBuffer.get(), Math.floor((duration / currentTempo) * audioBuffer.sampleRate));
-                const downloadUrl = URL.createObjectURL(wavBlob);
+                ffmpeg = new FFmpeg();
+                ffmpeg.on("log", ({ message }) => {
+                    console.log(message);
+                });
                 
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = downloadUrl;
-                a.download = `Audioble_Export_${Date.now()}.wav`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
-                document.body.removeChild(a);
-
-                exportBtn.textContent = "💾 Export Modified Audio (.wav)";
-                exportBtn.disabled = false;
-            } catch (err) {
-                console.error(err);
-                exportBtn.textContent = "Export Failed";
-                setTimeout(() => { exportBtn.textContent = "💾 Export Modified Audio (.wav)"; exportBtn.disabled = false; }, 2000);
+                // Load core package from CDN
+                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+                await ffmpeg.load({
+                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                });
+                
+                statusEl.textContent = "Engine Ready";
+                statusEl.classList.remove('text-amber-300', 'bg-slate-700');
+                statusEl.classList.add('text-emerald-300', 'bg-emerald-950/50');
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = "Engine Failed to Load";
+                statusEl.classList.remove('text-amber-300');
+                statusEl.classList.add('text-rose-400');
             }
-        });
-
-        loopToggle.addEventListener('change', (e) => {
-            if (player) {
-                player.loop = e.target.checked;
-                player.loopStart = parseFloat(startSlider.value);
-                player.loopEnd = parseFloat(endSlider.value);
-            }
-        });
-
-        startSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (val >= parseFloat(endSlider.value)) {
-                startSlider.value = parseFloat(endSlider.value) - 0.1;
-            }
-            if (player) player.loopStart = parseFloat(startSlider.value);
-            updateTimeDisplays();
-        });
-
-        endSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (val <= parseFloat(startSlider.value)) {
-                endSlider.value = parseFloat(startSlider.value) + 0.1;
-            }
-            if (player) player.loopEnd = parseFloat(endSlider.value);
-            updateTimeDisplays();
-        });
-
-        tempoSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (player) player.playbackRate = val;
-            tempoDisplay.textContent = `${val.toFixed(2)}x`;
-        });
-
-        pitchSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            if (pitchShift) pitchShift.pitch = val;
-            const sign = val > 0 ? "+" : "";
-            pitchDisplay.textContent = `${sign}${val} Semitones`;
-        });
-
-        reverbSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (reverb) reverb.wet.value = val;
-            reverbDisplay.textContent = `${Math.round(val * 100)}%`;
-        });
-
-        filterSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (filter) filter.frequency.value = val;
-            filterDisplay.textContent = val >= 20000 ? "Off" : `${val} Hz`;
-        });
-
-        function toggleControls(enable) {
-            playBtn.disabled = !enable;
-            stopBtn.disabled = !enable;
-            exportBtn.disabled = !enable;
-            loopToggle.disabled = !enable;
-            startSlider.disabled = !enable;
-            endSlider.disabled = !enable;
-            tempoSlider.disabled = !enable;
-            pitchSlider.disabled = !enable;
-            reverbSlider.disabled = !enable;
-            filterSlider.disabled = !enable;
-            if (!enable) isPlaying = false;
-            playBtn.textContent = "▶ Play";
         }
 
-        function resetSliders() {
-            loopToggle.checked = false;
-            startSlider.value = 0;
-            endSlider.value = trackDuration;
-            tempoSlider.value = 1; tempoDisplay.textContent = "1.0x";
-            pitchSlider.value = 0; pitchDisplay.textContent = "0 Semitones";
-            reverbSlider.value = 0; reverbDisplay.textContent = "0%";
-            filterSlider.value = 20000; filterDisplay.textContent = "Off";
+        loadFFmpeg();
+
+        // Tab Switching Logic
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-indigo-500', 'text-indigo-400');
+                el.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-content-${tabIndex}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabIndex}`);
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+            activeBtn.classList.add('border-indigo-500', 'text-indigo-400');
             
-            if (player) {
-                player.playbackRate = 1;
-                player.loop = false;
+            document.getElementById('output-box').classList.add('hidden');
+        }
+
+        function showOutput(message, url, filename) {
+            const box = document.getElementById('output-box');
+            const text = document.getElementById('output-text');
+            const container = document.getElementById('download-container');
+            
+            text.textContent = message;
+            container.innerHTML = `<a href="${url}" download="${filename}" class="inline-block bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-all shadow-lg">Download Result</a>`;
+            box.classList.remove('hidden');
+        }
+
+        // TAB 1 Process
+        async function processTab1() {
+            if (!ffmpeg) return alert('Engine still loading...');
+            const fileInput = document.getElementById('t1-file');
+            if (fileInput.files.length === 0) return alert('Please select an MP3 file.');
+            
+            const file = fileInput.files[0];
+            const targetFormat = document.getElementById('t1-format').value;
+            const outputName = `output.${targetFormat}`;
+
+            document.getElementById('t1-btn').textContent = "Processing...";
+            
+            const data = await file.arrayBuffer();
+            await ffmpeg.writeFile('input.mp3', new Uint8Array(data));
+            await ffmpeg.exec(['-i', 'input.mp3', outputName]);
+            
+            const outputData = await ffmpeg.readFile(outputName);
+            const blob = new Blob([outputData.buffer], { type: `audio/${targetFormat}` });
+            const url = URL.createObjectURL(blob);
+            
+            showOutput(`Successfully converted to ${targetFormat.toUpperCase()}!`, url, `mp3fac-converted.${targetFormat}`);
+            document.getElementById('t1-btn').textContent = "Convert & Download";
+        }
+
+        // TAB 2 Process
+        async function processTab2() {
+            if (!ffmpeg) return alert('Engine still loading...');
+            const fileInput = document.getElementById('t2-file');
+            if (fileInput.files.length === 0) return alert('Please select a file.');
+            
+            const file = fileInput.files[0];
+            const bitrate = document.getElementById('t2-bitrate').value;
+            const inputName = file.name;
+
+            document.getElementById('t2-btn').textContent = "Processing...";
+
+            const data = await file.arrayBuffer();
+            await ffmpeg.writeFile(inputName, new Uint8Array(data));
+            await ffmpeg.exec(['-i', inputName, '-b:a', bitrate, 'output.mp3']);
+            
+            const outputData = await ffmpeg.readFile('output.mp3');
+            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            
+            showOutput(`Successfully converted to MP3 (${bitrate})!`, url, 'mp3fac-converted.mp3');
+            document.getElementById('t2-btn').textContent = "Convert to MP3";
+        }
+
+        // TAB 3 Process
+        async function processTab3() {
+            if (!ffmpeg) return alert('Engine still loading...');
+            const fileInput = document.getElementById('t3-file');
+            if (fileInput.files.length === 0) return alert('Please select an MP3 file.');
+            
+            const file = fileInput.files[0];
+            const start = document.getElementById('t3-start').value;
+            const end = document.getElementById('t3-end').value;
+
+            document.getElementById('t3-btn').textContent = "Processing...";
+
+            const data = await file.arrayBuffer();
+            await ffmpeg.writeFile('input.mp3', new Uint8Array(data));
+            
+            // FFmpeg arguments for cutting: -ss (start), -to (end), -c copy (fast trim)
+            await ffmpeg.exec(['-i', 'input.mp3', '-ss', start, '-to', end, '-c', 'copy', 'cut.mp3']);
+            
+            const outputData = await ffmpeg.readFile('cut.mp3');
+            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            
+            showOutput('Successfully trimmed MP3!', url, 'mp3fac-cut.mp3');
+            document.getElementById('t3-btn').textContent = "Cut & Download MP3";
+        }
+
+        // TAB 4 Process
+        async function processTab4() {
+            if (!ffmpeg) return alert('Engine still loading...');
+            const fileInput = document.getElementById('t4-files');
+            if (fileInput.files.length < 2) return alert('Please select at least 2 MP3 files to join.');
+
+            document.getElementById('t4-btn').textContent = "Processing...";
+
+            let fileListTxt = '';
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                const safeName = `file${i}.mp3`;
+                const data = await file.arrayBuffer();
+                await ffmpeg.writeFile(safeName, new Uint8Array(data));
+                fileListTxt += `file ${safeName}\n`;
             }
-            if (pitchShift) pitchShift.pitch = 0;
-            if (reverb) reverb.wet.value = 0;
-            if (filter) filter.frequency.value = 20000;
-            updateTimeDisplays();
-        }
 
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            const millis = Math.floor((seconds % 1) * 10);
-            return `${mins}:${secs < 10 ? '0' : ''}${secs}.${millis}`;
-        }
+            await ffmpeg.writeFile('list.txt', fileListTxt);
+            
+            // Concatenate using ffmpeg concat demuxer
+            await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'joined.mp3']);
 
-        function updateTimeDisplays() {
-            startDisplay.textContent = formatTime(parseFloat(startSlider.value));
-            endDisplay.textContent = formatTime(parseFloat(endSlider.value));
-        }
+            const outputData = await ffmpeg.readFile('joined.mp3');
+            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
 
-        function bufferToWave(abuffer, len) {
-            let numOfChan = abuffer.numberOfChannels,
-                sampleRate = abuffer.sampleRate,
-                length = len * numOfChan * 2 + 44,
-                buffer = new ArrayBuffer(length),
-                view = new DataView(buffer),
-                channels = [],
-                sample,
-                offset = 0,
-                pos = 0;
-
-            setUint32(0x46464952);
-            setUint32(length - 8);
-            setUint32(0x45564157);
-
-            setUint32(0x20746d66);
-            setUint32(16);
-            setUint16(1);
-            setUint16(numOfChan);
-            setUint32(sampleRate);
-            setUint32(sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2);
-            setUint16(16);
-
-            setUint32(0x61746164);
-            setUint32(length - pos - 4);
-
-            for (let i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-
-            while (pos < length) {
-                for (let i = 0; i < numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
-                    view.setInt16(pos, sample, true);
-                    pos += 2;
-                }
-                offset++;
-            }
-
-            return new Blob([buffer], { type: "audio/wav" });
-
-            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+            showOutput('Successfully joined MP3 files!', url, 'mp3fac-joined.mp3');
+            document.getElementById('t4-btn').textContent = "Join & Download MP3";
         }
     </script>
 </body>
