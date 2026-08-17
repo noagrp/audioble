@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audioble - Practice & Backing Track Studio</title>
+    <title>Audioble</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     
@@ -149,7 +149,7 @@
 
     <div class="container">
         <h2>Audioble</h2>
-        <div class="subtitle">Practice & Backing Track Studio</div>
+        <div class="subtitle"></div>
 
         <label class="file-upload-label" for="audioUpload">📁 Select Audio / Video File</label>
         <input type="file" id="audioUpload" accept="audio/*, video/mp4, video/webm, .mp4, .m4a, .mkv">
@@ -177,7 +177,7 @@
 
         <!-- Performance Controls -->
         <div class="control-group">
-            <label><span>Tempo (Speed)</span><span id="tempoDisplay">1.0x</span></label>
+            <label><span>Tempo (Speed - No Pitch Shift)</span><span id="tempoDisplay">1.0x</span></label>
             <input type="range" id="tempoSlider" min="0.5" max="2.0" step="0.05" value="1" disabled>
             
             <label style="margin-top:15px;"><span>Key (Pitch Shift)</span><span id="pitchDisplay">0 Semitones</span></label>
@@ -253,42 +253,51 @@
             filter.connect(reverb);
             reverb.toDestination();
 
-            player = new Tone.Player({
-                url: url,
-                loop: false,
-                onload: () => {
-                    audioBuffer = player.buffer;
-                    trackDuration = audioBuffer.duration;
-                    fileNameDisplay.textContent = `Loaded: ${file.name}`;
-                    
-                    player.connect(pitchShift);
-                    
-                    // Setup A-B Loop Sliders
-                    startSlider.max = trackDuration;
-                    endSlider.max = trackDuration;
-                    startSlider.value = 0;
-                    endSlider.value = trackDuration;
-                    updateTimeDisplays();
+            // Load audio buffer first to get duration
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            audioBuffer = await Tone.context.decodeAudioData(arrayBuffer);
+            trackDuration = audioBuffer.duration;
 
-                    toggleControls(true);
-                    resetSliders();
-                }
-            });
+            fileNameDisplay.textContent = `Loaded: ${file.name}`;
+            
+            // Setup A-B Loop Sliders
+            startSlider.max = trackDuration;
+            endSlider.max = trackDuration;
+            startSlider.value = 0;
+            endSlider.value = trackDuration;
+            updateTimeDisplays();
+
+            toggleControls(true);
+            resetSliders();
         });
+
+        function createGrainPlayer() {
+            if (player) player.dispose();
+            player = new Tone.GrainPlayer({
+                url: audioBuffer,
+                loop: loopToggle.checked,
+                loopStart: parseFloat(startSlider.value),
+                loopEnd: parseFloat(endSlider.value),
+                playbackRate: parseFloat(tempoSlider.value),
+                grainSize: 0.1,
+                overlap: 0.05
+            });
+            player.connect(pitchShift);
+        }
 
         // 2. Play / Stop Controls
         playBtn.addEventListener('click', async () => {
             await Tone.start();
-            if (player && player.loaded) {
+            if (audioBuffer) {
                 if (!isPlaying) {
+                    createGrainPlayer();
                     const startTime = parseFloat(startSlider.value);
-                    const stopTime = loopToggle.checked ? parseFloat(endSlider.value) : trackDuration;
-                    
-                    player.start(0, startTime, stopTime - startTime);
+                    player.start(0, startTime);
                     isPlaying = true;
                     playBtn.textContent = "⏸ Pause";
                 } else {
-                    player.stop();
+                    if (player) player.stop();
                     isPlaying = false;
                     playBtn.textContent = "▶ Play";
                 }
@@ -315,9 +324,17 @@
                 const currentReverbWet = parseFloat(reverbSlider.value);
                 const currentFilterFreq = parseFloat(filterSlider.value);
 
+                const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
+                const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
+                const renderDuration = duration / currentTempo;
+
                 const renderedBuffer = await Tone.Offline(async () => {
-                    const offlinePlayer = new Tone.Player(audioBuffer);
-                    offlinePlayer.playbackRate = currentTempo;
+                    const offlinePlayer = new Tone.GrainPlayer({
+                        url: audioBuffer,
+                        playbackRate: currentTempo,
+                        grainSize: 0.1,
+                        overlap: 0.05
+                    });
 
                     const offlinePitch = new Tone.PitchShift({ pitch: currentPitch, windowSize: 0.1 });
                     const offlineFilter = new Tone.Filter({ frequency: currentFilterFreq, type: "lowpass" });
@@ -328,11 +345,8 @@
                     offlineFilter.connect(offlineReverb);
                     offlineReverb.toDestination();
 
-                    const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
-                    const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
-
-                    offlinePlayer.start(0, startTime, duration);
-                }, (trackDuration / currentTempo));
+                    offlinePlayer.start(0, startTime);
+                }, renderDuration);
 
                 // Convert AudioBuffer to WAV Blob
                 const wavBlob = bufferToWave(renderedBuffer.get(), renderedBuffer.length);
