@@ -16,13 +16,15 @@
     <style>
         body, html {
             margin: 0; padding: 0;
-            width: 100%; height: 100%;
+            width: 100%;
+            min-height: 100%;
             background-color: #121212;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
+            box-sizing: border-box;
         }
 
         .container {
@@ -34,8 +36,8 @@
             max-width: 520px;
             text-align: center;
             border: 1px solid #333;
-            max-height: 100%;
-            overflow-y: auto;
+            margin: 20px 0;
+            box-sizing: border-box;
         }
 
         h2 { 
@@ -53,12 +55,16 @@
         }
 
         .control-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             text-align: left;
-            background: #252525;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #333;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
 
         label {
@@ -113,7 +119,7 @@
         .btn-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         button {
@@ -203,7 +209,6 @@
         let trackDuration = 0;
         let isPlaying = false;
 
-        // UI Elements
         const audioUpload = document.getElementById('audioUpload');
         const fileNameDisplay = document.getElementById('fileName');
         const playBtn = document.getElementById('playBtn');
@@ -226,7 +231,6 @@
         const reverbDisplay = document.getElementById('reverbDisplay');
         const filterDisplay = document.getElementById('filterDisplay');
 
-        // 1. File Upload & Audio Graph Setup
         audioUpload.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -281,7 +285,6 @@
             player.connect(pitchShift);
         }
 
-        // 2. Play / Stop Controls
         playBtn.addEventListener('click', async () => {
             await Tone.start();
             if (audioBuffer) {
@@ -307,7 +310,6 @@
             }
         });
 
-        // 3. Standardized Direct Audio Export (Using Tone.Offline GrainPipeline)
         exportBtn.addEventListener('click', async () => {
             if (!audioBuffer) return;
             exportBtn.disabled = true;
@@ -364,7 +366,6 @@
             }
         });
 
-        // 4. Parameter Controls
         loopToggle.addEventListener('change', (e) => {
             if (player) {
                 player.loop = e.target.checked;
