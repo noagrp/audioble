@@ -6,9 +6,8 @@
     <title>MP3Fac</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FFmpeg WASM UMD Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+    <!-- Pure JavaScript MP3 Encoder (No WASM / No CORS Issues) -->
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
@@ -17,10 +16,10 @@
         <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">MP3Fac</h1>
-                <p class="text-sm text-slate-400 mt-1">All-in-one browser-based MP3 conversion and editing tool</p>
+                <p class="text-sm text-slate-400 mt-1">Browser-based audio suite powered by Native Web APIs & Pure JS</p>
             </div>
-            <div id="ffmpeg-status" class="text-xs bg-slate-700 px-3 py-1.5 rounded-full text-amber-300 font-medium">
-                Loading Audio Engine...
+            <div id="engine-status" class="text-xs bg-emerald-950/50 text-emerald-300 px-3 py-1.5 rounded-full font-medium border border-emerald-800/50">
+                Engine Ready (Pure JS)
             </div>
         </div>
     </header>
@@ -42,16 +41,12 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Select MP3 File</label>
-                    <input type="file" id="t1-file" accept=".mp3" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                    <input type="file" id="t1-file" accept=".mp3,audio/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Target Format</label>
                     <select id="t1-format" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
-                        <option value="wav">WAV (Lossless)</option>
-                        <option value="aac">AAC</option>
-                        <option value="ogg">OGG</option>
-                        <option value="flac">FLAC (Lossless)</option>
-                        <option value="m4a">M4A</option>
+                        <option value="wav">WAV (Lossless PCM)</option>
                     </select>
                 </div>
                 <button onclick="processTab1()" id="t1-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Convert & Download</button>
@@ -63,15 +58,15 @@
             <h2 class="text-xl font-bold mb-4">Convert Media to MP3</h2>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Select Audio/Video File (MP4, MPEG, WAV, AAC, etc.)</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select Audio/Video File (MP4, WAV, AAC, OGG, etc.)</label>
                     <input type="file" id="t2-file" accept="audio/*,video/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">MP3 Quality (Bitrate)</label>
                     <select id="t2-bitrate" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
-                        <option value="320k">320 kbps (High Quality)</option>
-                        <option value="192k" selected>192 kbps (Standard)</option>
-                        <option value="128k">128 kbps (Smaller File)</option>
+                        <option value="320">320 kbps (High Quality)</option>
+                        <option value="192" selected>192 kbps (Standard)</option>
+                        <option value="128">128 kbps (Smaller File)</option>
                     </select>
                 </div>
                 <button onclick="processTab2()" id="t2-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Convert to MP3</button>
@@ -88,12 +83,12 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Start Time (Point A)</label>
-                        <input type="text" id="t3-start" placeholder="00:00:00 or seconds" value="00:00:00" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Start Time (Seconds, e.g. 5)</label>
+                        <input type="number" id="t3-start" step="0.1" value="0" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">End Time (Point B)</label>
-                        <input type="text" id="t3-end" placeholder="00:00:10 or seconds" value="00:00:10" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">End Time (Seconds, e.g. 15)</label>
+                        <input type="number" id="t3-end" step="0.1" value="10" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 <button onclick="processTab3()" id="t3-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Cut & Download MP3</button>
@@ -106,14 +101,14 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Select 2 or More MP3 Files</label>
-                    <input type="file" id="t4-files" accept=".mp3" multiple class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                    <input type="file" id="t4-files" accept=".mp3,audio/*" multiple class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
                 </div>
-                <p class="text-xs text-slate-400">Files will be merged in the order they are selected.</p>
+                <p class="text-xs text-slate-400">Files will be merged in the exact order selected.</p>
                 <button onclick="processTab4()" id="t4-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg">Join & Download MP3</button>
             </div>
         </div>
 
-        <!-- Global Status / Output Section -->
+        <!-- Global Output Section -->
         <div id="output-box" class="mt-6 hidden bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
             <p id="output-text" class="text-sm text-slate-300 mb-3"></p>
             <div id="download-container"></div>
@@ -123,44 +118,13 @@
 
     <!-- Footer -->
     <footer class="text-center py-6 text-xs text-slate-500 border-t border-slate-800">
-        MP3Fac &bull; Powered by WebAssembly & FFmpeg
+        MP3Fac &bull; Built with Pure JavaScript & Web Audio API
     </footer>
 
     <!-- Logic Script -->
     <script>
-        const { FFmpeg } = FFmpegWASM;
-        const { toBlobURL } = FFmpegUtil;
-        let ffmpeg = null;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        async function loadFFmpeg() {
-            const statusEl = document.getElementById('ffmpeg-status');
-            try {
-                ffmpeg = new FFmpeg();
-                ffmpeg.on("log", ({ message }) => {
-                    console.log(message);
-                });
-                
-                // Using jsDelivr CDN with stable version 0.12.6 core files
-                const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-                await ffmpeg.load({
-                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                });
-                
-                statusEl.textContent = "Engine Ready";
-                statusEl.classList.remove('text-amber-300', 'bg-slate-700');
-                statusEl.classList.add('text-emerald-300', 'bg-emerald-950/50');
-            } catch (error) {
-                console.error(error);
-                statusEl.textContent = "Engine Failed to Load";
-                statusEl.classList.remove('text-amber-300');
-                statusEl.classList.add('text-rose-400');
-            }
-        }
-
-        loadFFmpeg();
-
-        // Tab Switching Logic
         function switchTab(tabIndex) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
@@ -186,105 +150,194 @@
             box.classList.remove('hidden');
         }
 
-        // TAB 1 Process
+        async function fileToAudioBuffer(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            return await audioCtx.decodeAudioData(arrayBuffer);
+        }
+
+        // Helper: Convert AudioBuffer to WAV Blob
+        function bufferToWav(abuffer) {
+            let numOfChan = abuffer.numberOfChannels,
+                length = abuffer.length * numOfChan * 2 + 44,
+                buffer = new ArrayBuffer(length),
+                view = new DataView(buffer),
+                channels = [],
+                sampleRate = abuffer.sampleRate,
+                offset = 0,
+                pos = 0;
+
+            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8); 
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt "
+            setUint32(16);         // length = 16
+            setUint32(1);          // PCM
+            setUint16(numOfChan);
+            setUint32(sampleRate);
+            setUint32(sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2);
+            setUint16(16);         // 16-bit
+            setUint32(0x61746164); // "data"
+            setUint32(length - pos - 4);
+
+            for (let i = 0; i < numOfChan; i++) channels.push(abuffer.getChannelData(i));
+
+            while (pos < length) {
+                for (let i = 0; i < numOfChan; i++) {
+                    let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        // Helper: Convert AudioBuffer to MP3 Blob using lamejs
+        function audioBufferToMp3(abuffer, bitrate = 128) {
+            let channels = abuffer.numberOfChannels;
+            let sampleRate = abuffer.sampleRate;
+            let mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, parseInt(bitrate));
+            let sampleBlockSize = 1152;
+            let mp3Data = [];
+
+            let left = abuffer.getChannelData(0);
+            let right = channels > 1 ? abuffer.getChannelData(1) : left;
+
+            let left16 = convertFloat32ToInt16(left);
+            let right16 = convertFloat32ToInt16(right);
+
+            for (let i = 0; i < left16.length; i += sampleBlockSize) {
+                let leftChunk = left16.subarray(i, i + sampleBlockSize);
+                let rightChunk = right16.subarray(i, i + sampleBlockSize);
+                let mp3buf = channels === 1 ? mp3encoder.encodeBuffer(leftChunk) : mp3encoder.encodeBuffer(leftChunk, rightChunk);
+                if (mp3buf.length > 0) mp3Data.push(mp3buf);
+            }
+            let mp3buf = mp3encoder.flush();
+            if (mp3buf.length > 0) mp3Data.push(mp3buf);
+
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        }
+
+        function convertFloat32ToInt16(buffer) {
+            let l = buffer.length;
+            let buf = new Int16Array(l);
+            for (let i = 0; i < l; i++) {
+                let s = Math.max(-1, Math.min(1, buffer[i]));
+                buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return buf;
+        }
+
+        // TAB 1: MP3 to WAV
         async function processTab1() {
-            if (!ffmpeg) return alert('Engine still loading...');
             const fileInput = document.getElementById('t1-file');
             if (fileInput.files.length === 0) return alert('Please select an MP3 file.');
             
-            const file = fileInput.files[0];
-            const targetFormat = document.getElementById('t1-format').value;
-            const outputName = `output.${targetFormat}`;
-
             document.getElementById('t1-btn').textContent = "Processing...";
-            
-            const data = await file.arrayBuffer();
-            await ffmpeg.writeFile('input.mp3', new Uint8Array(data));
-            await ffmpeg.exec(['-i', 'input.mp3', outputName]);
-            
-            const outputData = await ffmpeg.readFile(outputName);
-            const blob = new Blob([outputData.buffer], { type: `audio/${targetFormat}` });
-            const url = URL.createObjectURL(blob);
-            
-            showOutput(`Successfully converted to ${targetFormat.toUpperCase()}!`, url, `mp3fac-converted.${targetFormat}`);
+            try {
+                const audioBuffer = await fileToAudioBuffer(fileInput.files[0]);
+                const wavBlob = bufferToWav(audioBuffer);
+                const url = URL.createObjectURL(wavBlob);
+                showOutput('Successfully converted MP3 to WAV!', url, 'mp3fac-converted.wav');
+            } catch (err) {
+                alert('Conversion failed: ' + err.message);
+            }
             document.getElementById('t1-btn').textContent = "Convert & Download";
         }
 
-        // TAB 2 Process
+        // TAB 2: Others to MP3
         async function processTab2() {
-            if (!ffmpeg) return alert('Engine still loading...');
             const fileInput = document.getElementById('t2-file');
-            if (fileInput.files.length === 0) return alert('Please select a file.');
+            if (fileInput.files.length === 0) return alert('Please select an audio/video file.');
             
-            const file = fileInput.files[0];
             const bitrate = document.getElementById('t2-bitrate').value;
-            const inputName = file.name;
-
             document.getElementById('t2-btn').textContent = "Processing...";
-
-            const data = await file.arrayBuffer();
-            await ffmpeg.writeFile(inputName, new Uint8Array(data));
-            await ffmpeg.exec(['-i', inputName, '-b:a', bitrate, 'output.mp3']);
-            
-            const outputData = await ffmpeg.readFile('output.mp3');
-            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            
-            showOutput(`Successfully converted to MP3 (${bitrate})!`, url, 'mp3fac-converted.mp3');
+            try {
+                const audioBuffer = await fileToAudioBuffer(fileInput.files[0]);
+                const mp3Blob = audioBufferToMp3(audioBuffer, bitrate);
+                const url = URL.createObjectURL(mp3Blob);
+                showOutput(`Successfully converted to MP3 (${bitrate} kbps)!`, url, 'mp3fac-converted.mp3');
+            } catch (err) {
+                alert('Conversion failed: ' + err.message);
+            }
             document.getElementById('t2-btn').textContent = "Convert to MP3";
         }
 
-        // TAB 3 Process
+        // TAB 3: MP3 Cutter
         async function processTab3() {
-            if (!ffmpeg) return alert('Engine still loading...');
             const fileInput = document.getElementById('t3-file');
             if (fileInput.files.length === 0) return alert('Please select an MP3 file.');
             
-            const file = fileInput.files[0];
-            const start = document.getElementById('t3-start').value;
-            const end = document.getElementById('t3-end').value;
-
+            const startSec = parseFloat(document.getElementById('t3-start').value);
+            const endSec = parseFloat(document.getElementById('t3-end').value);
+            
             document.getElementById('t3-btn').textContent = "Processing...";
+            try {
+                const abuffer = await fileToAudioBuffer(fileInput.files[0]);
+                const sampleRate = abuffer.sampleRate;
+                const startFrame = Math.floor(startSec * sampleRate);
+                const endFrame = Math.floor(endSec * sampleRate);
+                const frameCount = endFrame - startFrame;
 
-            const data = await file.arrayBuffer();
-            await ffmpeg.writeFile('input.mp3', new Uint8Array(data));
-            
-            await ffmpeg.exec(['-i', 'input.mp3', '-ss', start, '-to', end, '-c', 'copy', 'cut.mp3']);
-            
-            const outputData = await ffmpeg.readFile('cut.mp3');
-            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            
-            showOutput('Successfully trimmed MP3!', url, 'mp3fac-cut.mp3');
+                if (frameCount <= 0 || startFrame < 0 || endFrame > abuffer.length) {
+                    throw new Error('Invalid A-B time points range.');
+                }
+
+                const newBuffer = audioCtx.createBuffer(abuffer.numberOfChannels, frameCount, sampleRate);
+                for (let i = 0; i < abuffer.numberOfChannels; i++) {
+                    const channelData = abuffer.getChannelData(i);
+                    const slicedData = newBuffer.getChannelData(i);
+                    for (let j = 0; j < frameCount; j++) {
+                        slicedData[j] = channelData[startFrame + j];
+                    }
+                }
+
+                const mp3Blob = audioBufferToMp3(newBuffer, 192);
+                const url = URL.createObjectURL(mp3Blob);
+                showOutput('Successfully trimmed MP3 cutter points!', url, 'mp3fac-cut.mp3');
+            } catch (err) {
+                alert('Cutter error: ' + err.message);
+            }
             document.getElementById('t3-btn').textContent = "Cut & Download MP3";
         }
 
-        // TAB 4 Process
+        // TAB 4: MP3 Joiner
         async function processTab4() {
-            if (!ffmpeg) return alert('Engine still loading...');
             const fileInput = document.getElementById('t4-files');
-            if (fileInput.files.length < 2) return alert('Please select at least 2 MP3 files to join.');
+            if (fileInput.files.length < 2) return alert('Please select at least 2 MP3 files.');
 
             document.getElementById('t4-btn').textContent = "Processing...";
+            try {
+                let buffers = [];
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    const buf = await fileToAudioBuffer(fileInput.files[i]);
+                    buffers.push(buf);
+                }
 
-            let fileListTxt = '';
-            for (let i = 0; i < fileInput.files.length; i++) {
-                const file = fileInput.files[i];
-                const safeName = `file${i}.mp3`;
-                const data = await file.arrayBuffer();
-                await ffmpeg.writeFile(safeName, new Uint8Array(data));
-                fileListTxt += `file ${safeName}\n`;
+                const sampleRate = buffers[0].sampleRate;
+                const channels = buffers[0].numberOfChannels;
+                const totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
+
+                const newBuffer = audioCtx.createBuffer(channels, totalLength, sampleRate);
+                let offset = 0;
+                for (let buf of buffers) {
+                    for (let i = 0; i < channels; i++) {
+                        newBuffer.getChannelData(i).set(buf.getChannelData(i), offset);
+                    }
+                    offset += buf.length;
+                }
+
+                const mp3Blob = audioBufferToMp3(newBuffer, 192);
+                const url = URL.createObjectURL(mp3Blob);
+                showOutput('Successfully joined MP3 files together!', url, 'mp3fac-joined.mp3');
+            } catch (err) {
+                alert('Joiner error: ' + err.message);
             }
-
-            await ffmpeg.writeFile('list.txt', fileListTxt);
-            
-            await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'joined.mp3']);
-
-            const outputData = await ffmpeg.readFile('joined.mp3');
-            const blob = new Blob([outputData.buffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-
-            showOutput('Successfully joined MP3 files!', url, 'mp3fac-joined.mp3');
             document.getElementById('t4-btn').textContent = "Join & Download MP3";
         }
     </script>
