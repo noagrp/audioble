@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Adjuster</title>
+    <title>Audioble - Practice & Backing Track Studio</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     
@@ -27,21 +27,33 @@
 
         .container {
             background: #1e1e1e;
-            padding: 40px;
+            padding: 30px 40px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             width: 90%;
-            max-width: 500px;
+            max-width: 520px;
             text-align: center;
             border: 1px solid #333;
             max-height: 90vh;
             overflow-y: auto;
         }
 
-        h2 { margin-top: 0; color: #4CAF50; margin-bottom: 20px; letter-spacing: 1px; }
+        h2 { 
+            margin: 0 0 5px 0; 
+            color: #4CAF50; 
+            font-size: 2rem; 
+            letter-spacing: 1.5px; 
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 25px;
+            letter-spacing: 0.5px;
+        }
 
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-align: left;
             background: #252525;
             padding: 15px;
@@ -54,7 +66,7 @@
             justify-content: space-between;
             font-size: 0.9rem;
             color: #bbb;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             align-items: center;
         }
 
@@ -64,10 +76,9 @@
             accent-color: #4CAF50;
         }
 
-        /* Karaoke Checkbox Styling */
         input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
             accent-color: #4CAF50;
         }
@@ -85,7 +96,7 @@
             transition: all 0.3s ease;
             width: 100%;
             box-sizing: border-box;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
 
@@ -110,7 +121,7 @@
             padding: 12px;
             border: none;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: bold;
             cursor: pointer;
             transition: 0.3s;
@@ -122,16 +133,25 @@
         #stopBtn { background: #d32f2f; color: white; }
         #stopBtn:hover:not(:disabled) { background: #b71c1c; }
 
+        #exportBtn { background: #2196F3; color: white; margin-bottom: 20px; width: 100%; }
+        #exportBtn:hover:not(:disabled) { background: #1976D2; }
+
         button:disabled { background: #444 !important; color: #777 !important; cursor: not-allowed; }
 
+        .time-display {
+            font-family: monospace;
+            color: #4CAF50;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Live Karaoke Player</h2>
+        <h2>Audioble</h2>
+        <div class="subtitle">Practice & Backing Track Studio</div>
 
-        <label class="file-upload-label" for="audioUpload">📁 Select Audio/Video File</label>
+        <label class="file-upload-label" for="audioUpload">📁 Select Audio / Video File</label>
         <input type="file" id="audioUpload" accept="audio/*, video/mp4, video/webm, .mp4, .m4a, .mkv">
         <span id="fileName">No file selected</span>
 
@@ -140,24 +160,31 @@
             <button id="stopBtn" disabled>⏹ Stop</button>
         </div>
 
-        <div class="control-group" style="background: #2c1a1a; border-color: #552222;">
-            <label style="color: #ff6b6b; font-weight: bold; margin-bottom: 0;">
-                <span>Remove Vocals (Some may not work). To export, use screen recorder with system audio toggled.</span>
-                <input type="checkbox" id="karaokeToggle" disabled>
+        <button id="exportBtn" disabled>💾 Export Modified Audio (.wav)</button>
+
+        <!-- Practice & Looping Group -->
+        <div class="control-group">
+            <label style="color: #4CAF50; font-weight: bold;">
+                <span>A-B Loop Practice</span>
+                <input type="checkbox" id="loopToggle" disabled>
             </label>
+            <label style="margin-top: 10px;"><span>Loop Start (A)</span><span id="startDisplay" class="time-display">0:00</span></label>
+            <input type="range" id="startSlider" min="0" max="100" step="0.1" value="0" disabled>
+            
+            <label style="margin-top: 10px;"><span>Loop End (B)</span><span id="endDisplay" class="time-display">0:00</span></label>
+            <input type="range" id="endSlider" min="0" max="100" step="0.1" value="100" disabled>
         </div>
 
+        <!-- Performance Controls -->
         <div class="control-group">
             <label><span>Tempo (Speed)</span><span id="tempoDisplay">1.0x</span></label>
             <input type="range" id="tempoSlider" min="0.5" max="2.0" step="0.05" value="1" disabled>
             
-            <label style="margin-top:15px;"><span>Key (Pitch)</span><span id="pitchDisplay">0 Semitones</span></label>
+            <label style="margin-top:15px;"><span>Key (Pitch Shift)</span><span id="pitchDisplay">0 Semitones</span></label>
             <input type="range" id="pitchSlider" min="-12" max="12" step="1" value="0" disabled>
-            
-            <label style="margin-top:15px; color:#4CAF50;"><span>Smoothness (Window Size)</span><span id="windowDisplay">0.10s</span></label>
-            <input type="range" id="windowSlider" min="0.03" max="0.5" step="0.01" value="0.1" disabled>
         </div>
 
+        <!-- Effects Group -->
         <div class="control-group">
             <label><span>Reverb Space</span><span id="reverbDisplay">0%</span></label>
             <input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0" disabled>
@@ -172,12 +199,8 @@
         let pitchShift = null;
         let reverb = null;
         let filter = null;
-        
-        // Karaoke specific nodes
-        let midSideSplit = null;
-        let midSideMerge = null;
-        let midGain = null;
-
+        let audioBuffer = null;
+        let trackDuration = 0;
         let isPlaying = false;
 
         // UI Elements
@@ -185,18 +208,21 @@
         const fileNameDisplay = document.getElementById('fileName');
         const playBtn = document.getElementById('playBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const exportBtn = document.getElementById('exportBtn');
         
-        const karaokeToggle = document.getElementById('karaokeToggle');
+        const loopToggle = document.getElementById('loopToggle');
+        const startSlider = document.getElementById('startSlider');
+        const endSlider = document.getElementById('endSlider');
+        const startDisplay = document.getElementById('startDisplay');
+        const endDisplay = document.getElementById('endDisplay');
         
         const tempoSlider = document.getElementById('tempoSlider');
         const pitchSlider = document.getElementById('pitchSlider');
-        const windowSlider = document.getElementById('windowSlider');
         const reverbSlider = document.getElementById('reverbSlider');
         const filterSlider = document.getElementById('filterSlider');
         
         const tempoDisplay = document.getElementById('tempoDisplay');
         const pitchDisplay = document.getElementById('pitchDisplay');
-        const windowDisplay = document.getElementById('windowDisplay');
         const reverbDisplay = document.getElementById('reverbDisplay');
         const filterDisplay = document.getElementById('filterDisplay');
 
@@ -209,59 +235,56 @@
             toggleControls(false);
             await Tone.start();
 
-            // Clean up old instances to prevent memory leaks
+            // Clean up old instances
             if (player) player.dispose();
             if (pitchShift) pitchShift.dispose();
             if (reverb) reverb.dispose();
             if (filter) filter.dispose();
-            if (midSideSplit) midSideSplit.dispose();
-            if (midSideMerge) midSideMerge.dispose();
-            if (midGain) midGain.dispose();
 
             const url = URL.createObjectURL(file);
 
-            // Initialize Standard Effects Chain
+            // Initialize Effects Chain
             pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.1 });
             filter = new Tone.Filter({ frequency: 20000, type: "lowpass" });
             reverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: 0 });
 
-            // Initialize Karaoke (Mid-Side) Nodes
-            midSideSplit = new Tone.MidSideSplit();
-            midSideMerge = new Tone.MidSideMerge();
-            midGain = new Tone.Gain(1); // 1 = Normal volume for the center channel
-
-            // Wire the Karaoke structure
-            // Split the audio -> send Mid to Volume Control -> Merge back together
-            midSideSplit.mid.connect(midGain);
-            midSideSplit.side.connect(midSideMerge.side);
-            midGain.connect(midSideMerge.mid);
-
-            // Final connection to speakers
-            midSideMerge.toDestination();
-
-            // Connect the main chain: Pitch -> Filter -> Reverb -> Karaoke Splitter
+            // Connect FX chain to destination
             pitchShift.connect(filter);
             filter.connect(reverb);
-            reverb.connect(midSideSplit);
+            reverb.toDestination();
 
             player = new Tone.Player({
                 url: url,
-                loop: true,
+                loop: false,
                 onload: () => {
+                    audioBuffer = player.buffer;
+                    trackDuration = audioBuffer.duration;
                     fileNameDisplay.textContent = `Loaded: ${file.name}`;
-                    player.connect(pitchShift); // Connect player to start of chain
+                    
+                    player.connect(pitchShift);
+                    
+                    // Setup A-B Loop Sliders
+                    startSlider.max = trackDuration;
+                    endSlider.max = trackDuration;
+                    startSlider.value = 0;
+                    endSlider.value = trackDuration;
+                    updateTimeDisplays();
+
                     toggleControls(true);
                     resetSliders();
                 }
             });
         });
 
-        // 2. Play / Stop
+        // 2. Play / Stop Controls
         playBtn.addEventListener('click', async () => {
             await Tone.start();
             if (player && player.loaded) {
                 if (!isPlaying) {
-                    player.start();
+                    const startTime = parseFloat(startSlider.value);
+                    const stopTime = loopToggle.checked ? parseFloat(endSlider.value) : trackDuration;
+                    
+                    player.start(0, startTime, stopTime - startTime);
                     isPlaying = true;
                     playBtn.textContent = "⏸ Pause";
                 } else {
@@ -280,13 +303,84 @@
             }
         });
 
-        // 3. Parameter Controls
-        karaokeToggle.addEventListener('change', (e) => {
-            if (midGain) {
-                // If checked, drop center channel volume to 0 (muting vocals). If unchecked, return to 1.
-                const targetVolume = e.target.checked ? 0 : 1;
-                midGain.gain.rampTo(targetVolume, 0.1);
+        // 3. Direct Audio Export (Offline Rendering)
+        exportBtn.addEventListener('click', async () => {
+            if (!audioBuffer) return;
+            exportBtn.disabled = true;
+            exportBtn.textContent = "Rendering audio file...";
+
+            try {
+                const currentTempo = parseFloat(tempoSlider.value);
+                const currentPitch = parseInt(pitchSlider.value);
+                const currentReverbWet = parseFloat(reverbSlider.value);
+                const currentFilterFreq = parseFloat(filterSlider.value);
+
+                const renderedBuffer = await Tone.Offline(async () => {
+                    const offlinePlayer = new Tone.Player(audioBuffer);
+                    offlinePlayer.playbackRate = currentTempo;
+
+                    const offlinePitch = new Tone.PitchShift({ pitch: currentPitch, windowSize: 0.1 });
+                    const offlineFilter = new Tone.Filter({ frequency: currentFilterFreq, type: "lowpass" });
+                    const offlineReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: currentReverbWet });
+
+                    offlinePlayer.connect(offlinePitch);
+                    offlinePitch.connect(offlineFilter);
+                    offlineFilter.connect(offlineReverb);
+                    offlineReverb.toDestination();
+
+                    const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
+                    const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
+
+                    offlinePlayer.start(0, startTime, duration);
+                }, (trackDuration / currentTempo));
+
+                // Convert AudioBuffer to WAV Blob
+                const wavBlob = bufferToWave(renderedBuffer.get(), renderedBuffer.length);
+                const downloadUrl = URL.createObjectURL(wavBlob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = `Audioble_Export_${Date.now()}.wav`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+
+                exportBtn.textContent = "💾 Export Modified Audio (.wav)";
+                exportBtn.disabled = false;
+            } catch (err) {
+                console.error(err);
+                exportBtn.textContent = "Export Failed";
+                setTimeout(() => { exportBtn.textContent = "💾 Export Modified Audio (.wav)"; exportBtn.disabled = false; }, 2000);
             }
+        });
+
+        // 4. Parameter Controls
+        loopToggle.addEventListener('change', (e) => {
+            if (player) {
+                player.loop = e.target.checked;
+                player.loopStart = parseFloat(startSlider.value);
+                player.loopEnd = parseFloat(endSlider.value);
+            }
+        });
+
+        startSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (val >= parseFloat(endSlider.value)) {
+                startSlider.value = parseFloat(endSlider.value) - 0.1;
+            }
+            if (player) player.loopStart = parseFloat(startSlider.value);
+            updateTimeDisplays();
+        });
+
+        endSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (val <= parseFloat(startSlider.value)) {
+                endSlider.value = parseFloat(startSlider.value) + 0.1;
+            }
+            if (player) player.loopEnd = parseFloat(endSlider.value);
+            updateTimeDisplays();
         });
 
         tempoSlider.addEventListener('input', (e) => {
@@ -300,12 +394,6 @@
             if (pitchShift) pitchShift.pitch = val;
             const sign = val > 0 ? "+" : "";
             pitchDisplay.textContent = `${sign}${val} Semitones`;
-        });
-
-        windowSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (pitchShift) pitchShift.windowSize = val;
-            windowDisplay.textContent = `${val.toFixed(2)}s`;
         });
 
         reverbSlider.addEventListener('input', (e) => {
@@ -324,10 +412,12 @@
         function toggleControls(enable) {
             playBtn.disabled = !enable;
             stopBtn.disabled = !enable;
-            karaokeToggle.disabled = !enable;
+            exportBtn.disabled = !enable;
+            loopToggle.disabled = !enable;
+            startSlider.disabled = !enable;
+            endSlider.disabled = !enable;
             tempoSlider.disabled = !enable;
             pitchSlider.disabled = !enable;
-            windowSlider.disabled = !enable;
             reverbSlider.disabled = !enable;
             filterSlider.disabled = !enable;
             if (!enable) isPlaying = false;
@@ -335,18 +425,80 @@
         }
 
         function resetSliders() {
-            karaokeToggle.checked = false;
+            loopToggle.checked = false;
+            startSlider.value = 0;
+            endSlider.value = trackDuration;
             tempoSlider.value = 1; tempoDisplay.textContent = "1.0x";
             pitchSlider.value = 0; pitchDisplay.textContent = "0 Semitones";
-            windowSlider.value = 0.1; windowDisplay.textContent = "0.10s";
             reverbSlider.value = 0; reverbDisplay.textContent = "0%";
             filterSlider.value = 20000; filterDisplay.textContent = "Off";
             
-            if (player) player.playbackRate = 1;
-            if (pitchShift) { pitchShift.pitch = 0; pitchShift.windowSize = 0.1; }
+            if (player) {
+                player.playbackRate = 1;
+                player.loop = false;
+            }
+            if (pitchShift) pitchShift.pitch = 0;
             if (reverb) reverb.wet.value = 0;
             if (filter) filter.frequency.value = 20000;
-            if (midGain) midGain.gain.value = 1;
+            updateTimeDisplays();
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const millis = Math.floor((seconds % 1) * 10);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}.${millis}`;
+        }
+
+        function updateTimeDisplays() {
+            startDisplay.textContent = formatTime(parseFloat(startSlider.value));
+            endDisplay.textContent = formatTime(parseFloat(endSlider.value));
+        }
+
+        // WAV Encoder Helper for Offline Export
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels,
+                sampleRate = abuffer.sampleRate,
+                length = len * numOfChan * 2 + 44,
+                buffer = new ArrayBuffer(length),
+                view = new DataView(buffer),
+                channels = [],
+                sample,
+                offset = 0,
+                pos = 0;
+
+            setUint32(0x46464952);                         // "RIFF"
+            setUint32(length - 8);                         // file length - 8
+            setUint32(0x45564157);                         // "WAVE"
+
+            setUint32(0x20746d66);                         // "fmt " chunk
+            setUint32(16);                                 // length = 16
+            setUint16(1);                                  // PCM (uncompressed)
+            setUint16(numOfChan);
+            setUint32(sampleRate);
+            setUint32(sampleRate * 2 * numOfChan);         // avg. bytes/sec
+            setUint16(numOfChan * 2);                      // block-align
+            setUint16(16);                                 // 16-bit
+
+            setUint32(0x61746164);                         // "data" - chunk
+            setUint32(length - pos - 4);                   // chunk length
+
+            for (let i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+
+            while (pos < length) {
+                for (let i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return new Blob([buffer], { type: "audio/wav" });
+
+            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
         }
     </script>
 </body>
