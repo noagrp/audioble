@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MP3Fac</title>
-    <!-- Tailwind CSS for modern styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FFmpeg WASM for browser-based audio processing -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+    <!-- FFmpeg WASM UMD Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-p-0 min-h-screen flex flex-col">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
     <!-- Header -->
     <header class="bg-slate-800 border-b border-slate-700 py-6 px-8 shadow-md">
@@ -129,6 +129,7 @@
     <!-- Logic Script -->
     <script>
         const { FFmpeg } = FFmpegWASM;
+        const { toBlobURL } = FFmpegUtil;
         let ffmpeg = null;
 
         async function loadFFmpeg() {
@@ -139,8 +140,8 @@
                     console.log(message);
                 });
                 
-                // Load core package from CDN
-                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+                // Using jsDelivr CDN with stable version 0.12.6 core files
+                const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
                 await ffmpeg.load({
                     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
                     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
@@ -248,7 +249,6 @@
             const data = await file.arrayBuffer();
             await ffmpeg.writeFile('input.mp3', new Uint8Array(data));
             
-            // FFmpeg arguments for cutting: -ss (start), -to (end), -c copy (fast trim)
             await ffmpeg.exec(['-i', 'input.mp3', '-ss', start, '-to', end, '-c', 'copy', 'cut.mp3']);
             
             const outputData = await ffmpeg.readFile('cut.mp3');
@@ -278,7 +278,6 @@
 
             await ffmpeg.writeFile('list.txt', fileListTxt);
             
-            // Concatenate using ffmpeg concat demuxer
             await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'joined.mp3']);
 
             const outputData = await ffmpeg.readFile('joined.mp3');
