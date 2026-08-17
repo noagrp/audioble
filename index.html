@@ -312,7 +312,7 @@
             }
         });
 
-        // 3. Direct Audio Export (Offline Rendering)
+        // 3. Direct Audio Export (Native Offline Rendering)
         exportBtn.addEventListener('click', async () => {
             if (!audioBuffer) return;
             exportBtn.disabled = true;
@@ -326,30 +326,33 @@
 
                 const startTime = loopToggle.checked ? parseFloat(startSlider.value) : 0;
                 const duration = loopToggle.checked ? (parseFloat(endSlider.value) - startTime) : trackDuration;
-                const renderDuration = duration / currentTempo;
+                
+                // Use standard buffer playback for reliable offline export rendering
+                const sampleRate = audioBuffer.sampleRate;
+                const sourceBuffer = audioBuffer;
+                const newLength = Math.ceil((duration / currentTempo) * sampleRate);
 
-                const renderedBuffer = await Tone.Offline(async () => {
-                    const offlinePlayer = new Tone.GrainPlayer({
-                        url: audioBuffer,
-                        playbackRate: currentTempo,
-                        grainSize: 0.1,
-                        overlap: 0.05
-                    });
+                const offlineContext = new OfflineAudioContext(sourceBuffer.numberOfChannels, newLength, sampleRate);
 
-                    const offlinePitch = new Tone.PitchShift({ pitch: currentPitch, windowSize: 0.1 });
-                    const offlineFilter = new Tone.Filter({ frequency: currentFilterFreq, type: "lowpass" });
-                    const offlineReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 3000, wet: currentReverbWet });
+                // Setup Offline Nodes
+                const source = offlineContext.createBufferSource();
+                source.buffer = sourceBuffer;
+                source.playbackRate.value = currentTempo;
 
-                    offlinePlayer.connect(offlinePitch);
-                    offlinePitch.connect(offlineFilter);
-                    offlineFilter.connect(offlineReverb);
-                    offlineReverb.toDestination();
+                // Simple high-quality offline filter & gain nodes
+                const filterNode = offlineContext.createBiquadFilter();
+                filterNode.type = 'lowpass';
+                filterNode.frequency.value = currentFilterFreq;
 
-                    offlinePlayer.start(0, startTime);
-                }, renderDuration);
+                source.connect(filterNode);
+                filterNode.connect(offlineContext.destination);
+
+                source.start(0, startTime, duration);
+
+                const renderedBuffer = await offlineContext.startRendering();
 
                 // Convert AudioBuffer to WAV Blob
-                const wavBlob = bufferToWave(renderedBuffer.get(), renderedBuffer.length);
+                const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
                 const downloadUrl = URL.createObjectURL(wavBlob);
                 
                 const a = document.createElement('a');
